@@ -27,10 +27,12 @@
     }
 
     html {
+      height: 100%;
       scrollbar-color: var(--scrollbar) transparent;
     }
 
     body {
+      min-height: 100%;
       margin: 0;
       background: var(--bg);
       color: var(--text);
@@ -56,24 +58,72 @@
 
     .page {
       width: 100%;
-      max-width: 720px;
+      min-height: 100vh;
+      max-width: 1280px;
       margin: 0 auto;
       padding: 24px;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+      gap: 20px;
     }
 
     .title {
-      margin: 0 0 20px;
+      margin: 0;
       color: var(--text);
       font-size: 17px;
       font-weight: 500;
       line-height: 1.35;
     }
 
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(320px, 420px) minmax(0, 1fr);
+      gap: 20px;
+      min-height: 0;
+    }
+
+    .column {
+      display: grid;
+      gap: 20px;
+      min-height: 0;
+    }
+
+    .left {
+      grid-template-rows: auto minmax(0, 1fr);
+    }
+
+    .right {
+      grid-template-rows: minmax(0, 1fr);
+    }
+
     .section {
+      min-height: 0;
       background: var(--bg-el);
       border-radius: 10px;
       padding: 16px;
-      margin: 0 0 20px;
+      display: grid;
+      gap: 12px;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .caption {
+      margin: 0;
+      color: var(--text-muted);
+      font-size: 13px;
+      font-weight: 400;
+    }
+
+    .summary {
+      color: var(--text-dim);
+      font-size: 13px;
+      white-space: nowrap;
     }
 
     .form {
@@ -83,7 +133,8 @@
 
     textarea {
       width: 100%;
-      min-height: 120px;
+      min-height: 132px;
+      max-height: 240px;
       resize: vertical;
       padding: 12px;
       background: var(--bg-el);
@@ -124,11 +175,20 @@
       opacity: 0.7;
     }
 
-    .caption {
-      margin: 0;
-      color: var(--text-muted);
+    .notice {
+      min-height: 18px;
+      color: var(--text-dim);
       font-size: 13px;
-      font-weight: 400;
+    }
+
+    .notice.active {
+      color: var(--accent);
+    }
+
+    .scroll {
+      min-height: 0;
+      overflow: auto;
+      padding-right: 2px;
     }
 
     .progress-list {
@@ -137,23 +197,67 @@
     }
 
     .progress-item {
-      display: flex;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px;
       align-items: center;
-      min-height: 24px;
+      min-height: 40px;
+      padding: 8px 0;
       color: var(--text-dim);
+      border-bottom: 1px solid var(--border);
       font-size: 13px;
-      overflow-wrap: anywhere;
     }
 
-    .progress-item.downloading {
+    .progress-item:last-child {
+      border-bottom: 0;
+    }
+
+    .progress-main {
+      display: flex;
+      align-items: center;
+      min-width: 0;
+    }
+
+    .progress-text {
+      min-width: 0;
+    }
+
+    .progress-title,
+    .progress-url {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .progress-title {
+      color: var(--text);
+      font-weight: 500;
+    }
+
+    .progress-url {
+      margin-top: 2px;
+      color: var(--text-dim);
+    }
+
+    .progress-state {
+      color: var(--text-dim);
+      white-space: nowrap;
+    }
+
+    .progress-item.downloading .progress-state,
+    .progress-item.downloading .progress-title {
       color: var(--accent);
     }
 
-    .progress-item.done {
+    .progress-item.done .progress-state,
+    .progress-item.done .progress-title,
+    .progress-item.skipped .progress-state,
+    .progress-item.skipped .progress-title {
       color: var(--success);
     }
 
-    .progress-item.error {
+    .progress-item.error .progress-state,
+    .progress-item.error .progress-title {
       color: var(--error);
     }
 
@@ -283,41 +387,100 @@
       font-size: 13px;
       padding: 4px 0;
     }
+
+    @media (max-width: 820px) {
+      .page {
+        min-height: 100vh;
+        padding: 16px;
+        display: block;
+      }
+
+      .title {
+        margin-bottom: 20px;
+      }
+
+      .layout,
+      .column {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 20px;
+      }
+
+      .section {
+        margin-bottom: 0;
+      }
+
+      .progress-scroll,
+      .tracks-scroll {
+        max-height: 40vh;
+      }
+    }
   </style>
 </head>
 <body>
   <main class="page">
     <h1 class="title">Sound Downloader</h1>
 
-    <section class="section">
-      <form class="form" id="downloadForm">
-        <textarea id="urls" placeholder="Paste SoundCloud URLs, one per line"></textarea>
-        <button class="primary" id="downloadButton" type="submit">↓ Download</button>
-      </form>
-    </section>
+    <div class="layout">
+      <div class="column left">
+        <section class="section">
+          <div class="section-header">
+            <p class="caption">Download</p>
+          </div>
+          <form class="form" id="downloadForm">
+            <textarea id="urls" placeholder="Paste SoundCloud URLs, one per line"></textarea>
+            <button class="primary" id="downloadButton" type="submit">↓ Download</button>
+            <div class="notice" id="notice"></div>
+          </form>
+        </section>
 
-    <section class="section">
-      <p class="caption">Progress</p>
-      <div class="progress-list" id="progressList">
-        <div class="empty">Waiting…</div>
+        <section class="section">
+          <div class="section-header">
+            <p class="caption">Progress</p>
+            <div class="summary" id="jobSummary">Downloaded 0 / 0</div>
+          </div>
+          <div class="scroll progress-scroll">
+            <div class="progress-list" id="progressList">
+              <div class="empty">Waiting…</div>
+            </div>
+          </div>
+        </section>
       </div>
-    </section>
 
-    <section class="section">
-      <p class="caption">Tracks</p>
-      <div class="tracks" id="tracks">
-        <div class="empty">No downloaded tracks</div>
+      <div class="column right">
+        <section class="section">
+          <div class="section-header">
+            <p class="caption">Tracks</p>
+            <div class="summary" id="trackSummary">0 tracks</div>
+          </div>
+          <div class="scroll tracks-scroll">
+            <div class="tracks" id="tracks">
+              <div class="empty">No downloaded tracks</div>
+            </div>
+          </div>
+        </section>
       </div>
-    </section>
+    </div>
   </main>
 
   <script>
     const form = document.getElementById('downloadForm');
     const textarea = document.getElementById('urls');
     const button = document.getElementById('downloadButton');
+    const notice = document.getElementById('notice');
+    const jobSummary = document.getElementById('jobSummary');
+    const trackSummary = document.getElementById('trackSummary');
     const progressList = document.getElementById('progressList');
     const tracksEl = document.getElementById('tracks');
-    const progressByUrl = new Map();
+    const jobs = new Map();
+
+    const statusRank = {
+      downloading: 0,
+      pending: 1,
+      error: 2,
+      done: 3,
+      skipped: 4
+    };
 
     function text(value) {
       return String(value || '');
@@ -338,45 +501,120 @@
       return `${mb.toFixed(mb >= 10 ? 1 : 2)} MB`;
     }
 
-    function clearEmpty(container, fallbackText) {
-      const empty = container.querySelector('.empty');
-      if (empty) {
-        empty.remove();
-      }
-
-      if (!container.children.length && fallbackText) {
-        const node = document.createElement('div');
-        node.className = 'empty';
-        node.textContent = fallbackText;
-        container.appendChild(node);
-      }
+    function setNotice(message) {
+      notice.textContent = message || '';
+      notice.className = message ? 'notice active' : 'notice';
     }
 
-    function setProgress(url, state, message) {
-      clearEmpty(progressList);
+    function getSummaryFromJobs() {
+      const summary = {
+        total: jobs.size,
+        done: 0,
+        error: 0,
+        pending: 0,
+        downloading: 0,
+        skipped: 0
+      };
 
-      let item = progressByUrl.get(url);
-      if (!item) {
-        item = document.createElement('div');
-        progressByUrl.set(url, item);
+      for (const job of jobs.values()) {
+        if (Object.prototype.hasOwnProperty.call(summary, job.status)) {
+          summary[job.status] += 1;
+        }
+      }
+
+      return summary;
+    }
+
+    function updateJobSummary(summary) {
+      const data = summary || getSummaryFromJobs();
+      const completed = (data.done || 0) + (data.skipped || 0);
+      const extra = [];
+      if (data.downloading) extra.push(`${data.downloading} downloading`);
+      if (data.pending) extra.push(`${data.pending} pending`);
+      if (data.error) extra.push(`${data.error} error`);
+      jobSummary.textContent = `Downloaded ${completed} / ${data.total || 0}${extra.length ? ` · ${extra.join(' · ')}` : ''}`;
+    }
+
+    function statusLabel(job) {
+      if (job.status === 'pending') return 'Waiting…';
+      if (job.status === 'downloading') return 'Downloading…';
+      if (job.status === 'done') return `✓ ${text(job.file || job.message)}`;
+      if (job.status === 'skipped') return `✓ ${text(job.file || job.message)}`;
+      if (job.status === 'error') return `✕ ${truncate(job.message)}`;
+      return text(job.message || job.status);
+    }
+
+    function renderJobs(summary) {
+      progressList.textContent = '';
+
+      const sortedJobs = Array.from(jobs.values()).sort((a, b) => {
+        const rankDiff = (statusRank[a.status] ?? 9) - (statusRank[b.status] ?? 9);
+        if (rankDiff !== 0) return rankDiff;
+        return text(b.updatedAt).localeCompare(text(a.updatedAt));
+      });
+
+      if (!sortedJobs.length) {
+        const empty = document.createElement('div');
+        empty.className = 'empty';
+        empty.textContent = 'Waiting…';
+        progressList.appendChild(empty);
+        updateJobSummary(summary);
+        return;
+      }
+
+      for (const job of sortedJobs) {
+        const item = document.createElement('div');
+        item.className = `progress-item ${job.status}`;
+
+        const main = document.createElement('div');
+        main.className = 'progress-main';
+
+        if (job.status === 'downloading') {
+          const spinner = document.createElement('span');
+          spinner.className = 'spinner';
+          main.appendChild(spinner);
+        }
+
+        const textWrap = document.createElement('div');
+        textWrap.className = 'progress-text';
+
+        const title = document.createElement('div');
+        title.className = 'progress-title';
+        title.textContent = statusLabel(job);
+
+        const url = document.createElement('div');
+        url.className = 'progress-url';
+        url.textContent = job.url;
+
+        const state = document.createElement('div');
+        state.className = 'progress-state';
+        state.textContent = job.status;
+
+        textWrap.append(title, url);
+        main.appendChild(textWrap);
+        item.append(main, state);
         progressList.appendChild(item);
       }
 
-      item.className = `progress-item ${state}`;
-      item.textContent = '';
+      updateJobSummary(summary);
+    }
 
-      if (state === 'pending') {
-        item.textContent = 'Waiting…';
-      } else if (state === 'downloading') {
-        const spinner = document.createElement('span');
-        spinner.className = 'spinner';
-        item.appendChild(spinner);
-        item.appendChild(document.createTextNode('Downloading…'));
-      } else if (state === 'done') {
-        item.textContent = `✓ ${text(message)}`;
-      } else if (state === 'error') {
-        item.textContent = `✕ ${truncate(message)}`;
+    function applyJob(job) {
+      if (!job || !job.id) {
+        return;
       }
+
+      jobs.set(job.id, { ...(jobs.get(job.id) || {}), ...job });
+    }
+
+    async function loadJobs() {
+      const response = await fetch('/jobs');
+      const data = await response.json();
+      jobs.clear();
+      for (const job of data.jobs || []) {
+        applyJob(job);
+      }
+      renderJobs(data.summary);
     }
 
     async function loadTracks() {
@@ -384,12 +622,18 @@
       const data = await response.json();
       tracksEl.textContent = '';
 
-      if (!data.tracks || data.tracks.length === 0) {
-        clearEmpty(tracksEl, 'No downloaded tracks');
+      const tracks = data.tracks || [];
+      trackSummary.textContent = `${tracks.length} ${tracks.length === 1 ? 'track' : 'tracks'}`;
+
+      if (tracks.length === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'empty';
+        empty.textContent = 'No downloaded tracks';
+        tracksEl.appendChild(empty);
         return;
       }
 
-      for (const track of data.tracks) {
+      for (const track of tracks) {
         const card = document.createElement('article');
         card.className = 'track';
 
@@ -444,15 +688,28 @@
       }
 
       button.disabled = true;
-      urls.forEach((url) => setProgress(url, 'pending'));
+      setNotice('');
 
       try {
-        await fetch('/download', {
+        const response = await fetch('/download', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ urls })
         });
+        const data = await response.json();
+
+        for (const job of data.jobs || []) {
+          applyJob(job);
+        }
+
+        renderJobs();
         textarea.value = '';
+
+        const parts = [];
+        if (data.queued) parts.push(`${data.queued} queued`);
+        if (data.skipped) parts.push(`${data.skipped} skipped`);
+        if (data.duplicates) parts.push(`${data.duplicates} duplicate`);
+        setNotice(parts.join(' · '));
       } finally {
         button.disabled = false;
       }
@@ -461,20 +718,35 @@
     const events = new EventSource('/events');
     events.onmessage = (message) => {
       const event = JSON.parse(message.data);
-      if (!event.url) {
+
+      if (event.type === 'snapshot') {
+        jobs.clear();
+        for (const job of event.jobs || []) {
+          applyJob(job);
+        }
+        renderJobs(event.summary);
         return;
       }
 
-      if (event.type === 'start' || event.type === 'progress') {
-        setProgress(event.url, 'downloading', event.message);
-      } else if (event.type === 'done') {
-        setProgress(event.url, 'done', event.message);
+      if (event.jobId) {
+        applyJob({
+          id: event.jobId,
+          url: event.url,
+          normalizedUrl: event.normalizedUrl || '',
+          status: event.status,
+          message: event.message,
+          file: event.file,
+          updatedAt: new Date().toISOString()
+        });
+        renderJobs(event.summary);
+      }
+
+      if (event.status === 'done' || event.status === 'skipped') {
         loadTracks();
-      } else if (event.type === 'error') {
-        setProgress(event.url, 'error', event.message);
       }
     };
 
+    loadJobs();
     loadTracks();
   </script>
 </body>

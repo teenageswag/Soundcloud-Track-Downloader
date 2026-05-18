@@ -14,9 +14,12 @@ const FALLBACK_YTDLP = path.join(BIN_DIR, 'yt-dlp.exe');
 const FALLBACK_FFMPEG = path.join(BIN_DIR, 'ffmpeg.exe');
 
 const WINDOWS_ILLEGAL_RE = /[\\/:*?"<>|]/g;
+const MAX_CONCURRENT_DOWNLOADS = 3;
 const clients = new Set();
-const queue = [];
-let isProcessing = false;
+const jobs = new Map();
+const pendingQueue = [];
+let activeCount = 0;
+let nextJobId = 1;
 
 fs.mkdirSync(PUBLIC_DIR, { recursive: true });
 fs.mkdirSync(DOWNLOAD_DIR, { recursive: true });
@@ -78,10 +81,78 @@ function safeDownloadsPath(fileName) {
 }
 
 function broadcast(event) {
-  const payload = `data: ${JSON.stringify(event)}\n\n`;
+  const payload = `data: ${JSON.stringify({ ...event, summary: getJobSummary() })}\n\n`;
   for (const client of clients) {
     client.write(payload);
   }
+}
+
+function normalizeUrl(value) {
+  const raw = String(value || '').trim();
+  if (!raw) {
+    return '';
+  }
+
+  try {
+    const parsed = new URL(raw);
+    parsed.hash = '';
+    parsed.protocol = parsed.protocol.toLowerCase();
+    parsed.hostname = parsed.hostname.toLowerCase();
+    parsed.pathname = parsed.pathname.replace(/\/+$/, '');
+    return parsed.toString();
+  } catch {
+    return raw.replace(/#.*$/, '').replace(/\/+$/, '');
+  }
+}
+
+function getJobSummary() {
+  const summary = {
+    total: jobs.size,
+    done: 0,
+    error: 0,
+    pending: 0,
+    downloading: 0,
+    skipped: 0
+  };
+
+  for (const job of jobs.values()) {
+    if (Object.prototype.hasOwnProperty.call(summary, job.status)) {
+      summary[job.status] += 1;
+    }
+  }
+
+  return summary;
+}
+
+function publicJob(job) {
+  return {
+    id: job.id,
+    url: job.url,
+    normalizedUrl: job.normalizedUrl,
+    status: job.status,
+    message: job.message,
+    file: job.file,
+    createdAt: job.createdAt,
+    updatedAt: job.updatedAt
+  };
+}
+
+function getJobsPayload() {
+  return {
+    jobs: Array.from(jobs.values()).map(publicJob),
+    summary: getJobSummary()
+  };
+}
+
+function setJobStatus(job, status, message, file) {
+  job.status = status;
+  job.message = message || '';
+  if (file) {
+    job.file = file;
+  }
+  job.updatedAt = new Date().toISOString();
+
+  broadcast({ type: status, jobId: job.id, ...publicJob(job) });
 }
 
 function formatDuration(seconds) {
@@ -109,6 +180,34 @@ function readInfoJson(infoPath) {
   } catch {
     return {};
   }
+}
+
+function findExistingDownloadByUrl(normalizedUrl) {
+  const files = fs.readdirSync(DOWNLOAD_DIR);
+
+  for (const file of files) {
+    if (!file.toLowerCase().endsWith('.info.json')) {
+      continue;
+    }
+
+    const infoPath = path.join(DOWNLOAD_DIR, file);
+    const info = readInfoJson(infoPath);
+    if (normalizeUrl(info.webpage_url) !== normalizedUrl) {
+      continue;
+    }
+
+    const baseName = file.slice(0, -'.info.json'.length);
+    const mp3File = findByBase(baseName, '.mp3');
+    if (mp3File) {
+      return {
+        file: mp3File,
+        infoPath,
+        mp3Path: path.join(DOWNLOAD_DIR, mp3File)
+      };
+    }
+  }
+
+  return null;
 }
 
 function getTags(filePath) {
@@ -231,8 +330,9 @@ function truncateError(message) {
   return text.length > 180 ? `${text.slice(0, 177)}...` : text;
 }
 
-function downloadUrl(url) {
+function downloadUrl(job) {
   return new Promise((resolve) => {
+    const { url } = job;
     const beforeFiles = new Set(fs.readdirSync(DOWNLOAD_DIR));
     const outputTemplate = path.join(DOWNLOAD_DIR, '%(uploader)s - %(title)s.%(ext)s');
     const args = [
@@ -248,7 +348,7 @@ function downloadUrl(url) {
       url
     ];
 
-    broadcast({ type: 'start', url, message: 'Starting download' });
+    setJobStatus(job, 'downloading', 'Starting download');
 
     const child = spawn(ytDlpPath, args, { shell: false });
     let stderr = '';
@@ -256,7 +356,7 @@ function downloadUrl(url) {
     child.stdout.on('data', (chunk) => {
       const message = chunk.toString().trim();
       if (message) {
-        broadcast({ type: 'progress', url, message });
+        setJobStatus(job, 'downloading', message);
       }
     });
 
@@ -264,30 +364,31 @@ function downloadUrl(url) {
       const message = chunk.toString().trim();
       stderr += `${message}\n`;
       if (message) {
-        broadcast({ type: 'progress', url, message });
+        setJobStatus(job, 'downloading', message);
       }
     });
 
     child.on('error', (error) => {
-      broadcast({ type: 'error', url, message: truncateError(error.message) });
+      setJobStatus(job, 'error', truncateError(error.message));
       resolve();
     });
 
     child.on('close', (code) => {
       if (code !== 0) {
-        broadcast({ type: 'error', url, message: truncateError(stderr) });
+        setJobStatus(job, 'error', truncateError(stderr));
         resolve();
         return;
       }
 
       try {
         const createdFiles = filesAfterDownload(beforeFiles);
-        const initialInfoPath = findCreatedInfoJson(createdFiles);
+        const existing = findExistingDownloadByUrl(job.normalizedUrl);
+        const initialInfoPath = existing ? existing.infoPath : findCreatedInfoJson(createdFiles);
         const initialInfo = initialInfoPath ? readInfoJson(initialInfoPath) : {};
-        const mp3Path = findDownloadedMp3(createdFiles, initialInfo);
+        const mp3Path = existing ? existing.mp3Path : findDownloadedMp3(createdFiles, initialInfo);
 
         if (!mp3Path) {
-          broadcast({ type: 'error', url, message: 'Downloaded MP3 file was not found' });
+          setJobStatus(job, 'error', 'Downloaded MP3 file was not found');
           resolve();
           return;
         }
@@ -312,9 +413,9 @@ function downloadUrl(url) {
 
         const info = infoPath ? readInfoJson(infoPath) : initialInfo;
         writeMetadata(finalMp3Path, info, artworkPath);
-        broadcast({ type: 'done', url, message: path.basename(finalMp3Path) });
+        setJobStatus(job, 'done', path.basename(finalMp3Path), path.basename(finalMp3Path));
       } catch (error) {
-        broadcast({ type: 'error', url, message: truncateError(error.message) });
+        setJobStatus(job, 'error', truncateError(error.message));
       }
 
       resolve();
@@ -322,17 +423,45 @@ function downloadUrl(url) {
   });
 }
 
-async function processQueue() {
-  if (isProcessing) {
-    return;
-  }
+function runNextJobs() {
+  while (activeCount < MAX_CONCURRENT_DOWNLOADS && pendingQueue.length > 0) {
+    const job = pendingQueue.shift();
+    activeCount += 1;
 
-  isProcessing = true;
-  while (queue.length > 0) {
-    const url = queue.shift();
-    await downloadUrl(url);
+    downloadUrl(job)
+      .catch((error) => {
+        setJobStatus(job, 'error', truncateError(error.message));
+      })
+      .finally(() => {
+        activeCount -= 1;
+        runNextJobs();
+      });
   }
-  isProcessing = false;
+}
+
+function createJob(url, normalizedUrl, status, message, file) {
+  const now = new Date().toISOString();
+  const job = {
+    id: String(nextJobId),
+    url,
+    normalizedUrl,
+    status,
+    message: message || '',
+    file: file || '',
+    createdAt: now,
+    updatedAt: now
+  };
+
+  nextJobId += 1;
+  jobs.set(job.id, job);
+  return job;
+}
+
+function findActiveOrPendingJob(normalizedUrl) {
+  return Array.from(jobs.values()).find((job) => (
+    job.normalizedUrl === normalizedUrl &&
+    (job.status === 'pending' || job.status === 'downloading')
+  )) || null;
 }
 
 function trackFromFile(file) {
@@ -373,9 +502,50 @@ app.post('/download', (req, res) => {
     return;
   }
 
-  queue.push(...cleanUrls);
-  processQueue();
-  res.json({ queued: cleanUrls.length });
+  const seen = new Set();
+  const responseJobs = [];
+  let queued = 0;
+  let skipped = 0;
+  let duplicates = 0;
+
+  for (const url of cleanUrls) {
+    const normalizedUrl = normalizeUrl(url);
+    if (!normalizedUrl || seen.has(normalizedUrl)) {
+      duplicates += 1;
+      continue;
+    }
+
+    seen.add(normalizedUrl);
+
+    const runningJob = findActiveOrPendingJob(normalizedUrl);
+    if (runningJob) {
+      duplicates += 1;
+      responseJobs.push(publicJob(runningJob));
+      continue;
+    }
+
+    const existingDownload = findExistingDownloadByUrl(normalizedUrl);
+    if (existingDownload) {
+      const job = createJob(url, normalizedUrl, 'skipped', existingDownload.file, existingDownload.file);
+      skipped += 1;
+      responseJobs.push(publicJob(job));
+      broadcast({ type: 'skipped', jobId: job.id, ...publicJob(job) });
+      continue;
+    }
+
+    const job = createJob(url, normalizedUrl, 'pending', 'Waiting');
+    pendingQueue.push(job);
+    queued += 1;
+    responseJobs.push(publicJob(job));
+    broadcast({ type: 'pending', jobId: job.id, ...publicJob(job) });
+  }
+
+  runNextJobs();
+  res.json({ queued, skipped, duplicates, jobs: responseJobs });
+});
+
+app.get('/jobs', (req, res) => {
+  res.json(getJobsPayload());
 });
 
 app.get('/tracks', (req, res) => {
@@ -426,7 +596,7 @@ app.get('/events', (req, res) => {
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
   res.flushHeaders();
-  res.write('data: {"type":"ready","message":"Connected"}\n\n');
+  res.write(`data: ${JSON.stringify({ type: 'snapshot', ...getJobsPayload() })}\n\n`);
 
   clients.add(res);
   req.on('close', () => {

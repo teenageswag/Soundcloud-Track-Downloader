@@ -92,6 +92,7 @@ Release*/*.lib
 *.psd
 *.blend
 *.fbx
+./downloads
 
 # ────────────────
 # Архивы

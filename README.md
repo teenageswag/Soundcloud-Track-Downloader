@@ -28,8 +28,3 @@ http://localhost:3333
 ```
 
 Paste SoundCloud URLs, one per line, and click Download. MP3 files and matching `.info.json` metadata files are saved in the `downloads` directory.
-
-# TODO
-
-- [ ] Добавь проверку на повтор ссылки
-- [ ] Добавь возможность скачивать треки параллельно, чтобы увеличить скорость загрузки
