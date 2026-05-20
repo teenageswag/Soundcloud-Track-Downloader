@@ -1,321 +1,551 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Sound Downloader</title>
+  <title>Soundwave Downloader</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
       --bg: #171717;
-      --bg-el: #191919;
-      --bg-hover: #1f1f1f;
-      --bg-active: #252525;
-      --bg-selected: #2a2510;
+      --surface: #191919;
       --border: #262626;
-      --border-var: #737373;
-      --accent: #E0C952;
+      --border-accent: #E0C952;
       --text: #CCCCCC;
       --text-muted: #999999;
       --text-dim: #737373;
-      --success: #75BF40;
-      --error: #CC3333;
-      --scrollbar: #73737366;
+      --accent: #E0C952;
+      --green: #75BF40;
+      --red: #CC3333;
     }
 
     * {
       box-sizing: border-box;
-    }
-
-    html {
-      height: 100%;
-      scrollbar-color: var(--scrollbar) transparent;
-    }
-
-    body {
-      min-height: 100%;
       margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      height: 100vh;
+      width: 100vw;
       background: var(--bg);
       color: var(--text);
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      font-size: 15px;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 14px;
       font-weight: 400;
-      line-height: 1.45;
+      line-height: 1.5;
+      overflow: hidden;
     }
 
+    /* Scrollbars matching palette */
     ::-webkit-scrollbar {
-      width: 8px;
-      height: 8px;
+      width: 6px;
+      height: 6px;
     }
-
     ::-webkit-scrollbar-thumb {
-      background: var(--scrollbar);
-      border-radius: 4px;
+      background: var(--border);
+      border-radius: 3px;
+      transition: background 0.2s;
     }
-
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--text-dim);
+    }
     ::-webkit-scrollbar-track {
       background: transparent;
     }
 
-    .page {
-      width: 100%;
-      min-height: 100vh;
-      max-width: 1280px;
-      margin: 0 auto;
-      padding: 24px;
-      display: grid;
-      grid-template-rows: auto minmax(0, 1fr);
-      gap: 20px;
+    /* Premium Text Selection */
+    ::selection {
+      background: var(--accent);
+      color: var(--bg);
     }
 
-    .title {
-      margin: 0;
-      color: var(--text);
-      font-size: 17px;
-      font-weight: 500;
-      line-height: 1.35;
+    .app-container {
+      height: 100vh;
+      max-height: 100vh;
+      padding: 18px;
+      box-sizing: border-box;
     }
 
-    .layout {
+    /* Core Dashboard Layout */
+    .dashboard-layout {
       display: grid;
-      grid-template-columns: minmax(320px, 420px) minmax(0, 1fr);
-      gap: 20px;
+      grid-template-columns: 360px 1fr;
+      gap: 16px;
+      min-height: 0;
+      height: 100%;
+    }
+
+    /* Panels */
+    .sidebar {
+      display: grid;
+      grid-template-rows: auto 1fr;
+      gap: 16px;
       min-height: 0;
     }
 
-    .column {
-      display: grid;
-      gap: 20px;
-      min-height: 0;
-    }
-
-    .left {
-      grid-template-rows: auto minmax(0, 1fr);
-    }
-
-    .right {
-      grid-template-rows: minmax(0, 1fr);
-    }
-
-    .section {
-      min-height: 0;
-      background: var(--bg-el);
-      border-radius: 10px;
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
       padding: 16px;
-      display: grid;
-      gap: 12px;
-    }
-
-    .section-header {
       display: flex;
-      align-items: baseline;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
       justify-content: space-between;
-      gap: 12px;
-      min-width: 0;
+      margin-bottom: 12px;
+      flex: 0 0 auto;
     }
 
-    .caption {
-      margin: 0;
+    .panel-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .panel-badge {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 10px;
+      font-weight: 600;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      padding: 2px 8px;
+      border-radius: 8px;
       color: var(--text-muted);
-      font-size: 13px;
-      font-weight: 400;
     }
 
-    .summary {
-      color: var(--text-dim);
-      font-size: 13px;
-      white-space: nowrap;
-    }
-
-    .form {
-      display: grid;
+    /* Form Design */
+    .form-group {
+      display: flex;
+      flex-direction: column;
       gap: 8px;
     }
 
-    textarea {
+    .input-textarea {
       width: 100%;
-      min-height: 132px;
-      max-height: 240px;
-      resize: vertical;
-      padding: 12px;
-      background: var(--bg-el);
-      color: var(--text);
+      height: 100px;
+      resize: none;
+      background: var(--bg);
       border: 1px solid var(--border);
       border-radius: 8px;
-      font: 400 14px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      padding: 10px 12px;
+      color: var(--text);
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 13px;
+      line-height: 1.5;
+      transition: border-color 0.2s, box-shadow 0.2s;
     }
 
-    textarea::placeholder {
+    .input-textarea::placeholder {
       color: var(--text-dim);
     }
 
-    textarea:focus,
-    input:focus {
-      border-color: var(--accent);
+    .input-textarea:focus {
       outline: none;
+      border-color: var(--border-accent);
+      box-shadow: 0 0 0 2px rgba(224, 201, 82, 0.1);
     }
 
-    .primary {
+    .btn-download {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
       width: 100%;
-      height: 44px;
-      border: 0;
-      border-radius: 8px;
+      height: 38px;
       background: var(--accent);
-      color: #171717;
-      font: 500 15px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--bg);
+      border: none;
+      border-radius: 8px;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
       cursor: pointer;
+      transition: filter 0.15s, transform 0.1s, opacity 0.2s;
     }
 
-    .primary:hover {
-      filter: brightness(1.1);
+    .btn-download:hover {
+      filter: brightness(1.08);
     }
 
-    .primary:disabled {
-      cursor: default;
+    .btn-download:active {
+      transform: scale(0.99);
+    }
+
+    .btn-download:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
       filter: none;
-      opacity: 0.7;
     }
 
     .notice {
-      min-height: 18px;
+      font-size: 12px;
       color: var(--text-dim);
-      font-size: 13px;
+      min-height: 18px;
+      transition: color 0.2s;
+      margin-top: 4px;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      overflow: hidden;
     }
 
     .notice.active {
       color: var(--accent);
     }
 
-    .scroll {
-      min-height: 0;
-      overflow: auto;
+    /* Queue Panels */
+    .queue-list {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
       padding-right: 2px;
     }
 
-    .progress-list {
-      display: grid;
-      gap: 8px;
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      height: 100%;
+      color: var(--text-dim);
+      font-size: 13px;
+      text-align: center;
+      padding: 20px 0;
     }
 
-    .progress-item {
+    .empty-state svg {
+      color: var(--border);
+    }
+
+    /* Queue Items */
+    .queue-item {
       display: grid;
       grid-template-columns: minmax(0, 1fr) auto;
-      gap: 8px;
+      gap: 12px;
+      padding: 10px 12px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
       align-items: center;
-      min-height: 40px;
-      padding: 8px 0;
-      color: var(--text-dim);
-      border-bottom: 1px solid var(--border);
-      font-size: 13px;
+      animation: slide-in 0.22s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
-    .progress-item:last-child {
-      border-bottom: 0;
+    .queue-details {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
     }
 
-    .progress-main {
+    .queue-title-row {
       display: flex;
       align-items: center;
+      gap: 8px;
       min-width: 0;
     }
 
-    .progress-text {
-      min-width: 0;
-    }
-
-    .progress-title,
-    .progress-url {
+    .queue-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+      white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      line-height: 1.3;
+    }
+
+    .queue-url {
+      font-size: 11px;
+      color: var(--text-dim);
       white-space: nowrap;
-    }
-
-    .progress-title {
-      color: var(--text);
-      font-weight: 500;
-    }
-
-    .progress-url {
+      overflow: hidden;
+      text-overflow: ellipsis;
       margin-top: 2px;
-      color: var(--text-dim);
     }
 
-    .progress-state {
-      color: var(--text-dim);
-      white-space: nowrap;
+    .queue-status-tag {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
     }
 
-    .progress-item.downloading .progress-state,
-    .progress-item.downloading .progress-title {
+    /* Queue States */
+    .queue-item.pending {
+      border-left: 3px solid var(--text-dim);
+    }
+    .queue-item.pending .queue-status-tag {
+      background: rgba(115, 115, 115, 0.08);
+      color: var(--text-muted);
+      border: 1px solid rgba(115, 115, 115, 0.15);
+    }
+
+    .queue-item.downloading {
+      border-left: 3px solid var(--accent);
+      background: rgba(224, 201, 82, 0.01);
+    }
+    .queue-item.downloading .queue-title {
       color: var(--accent);
     }
-
-    .progress-item.done .progress-state,
-    .progress-item.done .progress-title,
-    .progress-item.skipped .progress-state,
-    .progress-item.skipped .progress-title {
-      color: var(--success);
+    .queue-item.downloading .queue-status-tag {
+      background: rgba(224, 201, 82, 0.08);
+      color: var(--accent);
+      border: 1px solid rgba(224, 201, 82, 0.2);
+      animation: pulse-border 1.5s infinite;
     }
 
-    .progress-item.error .progress-state,
-    .progress-item.error .progress-title {
-      color: var(--error);
+    .queue-item.done,
+    .queue-item.skipped {
+      border-left: 3px solid var(--green);
+    }
+    .queue-item.done .queue-title,
+    .queue-item.skipped .queue-title {
+      color: var(--green);
+    }
+    .queue-item.done .queue-status-tag,
+    .queue-item.skipped .queue-status-tag {
+      background: rgba(117, 191, 64, 0.08);
+      color: var(--green);
+      border: 1px solid rgba(117, 191, 64, 0.15);
     }
 
-    .spinner {
-      width: 14px;
-      height: 14px;
-      margin-right: 8px;
-      border: 2px solid var(--bg-active);
-      border-top-color: var(--accent);
-      border-radius: 50%;
-      animation: spin 700ms linear infinite;
-      flex: 0 0 auto;
+    .queue-item.error {
+      border-left: 3px solid var(--red);
+    }
+    .queue-item.error .queue-title {
+      color: var(--red);
+    }
+    .queue-item.error .queue-status-tag {
+      background: rgba(204, 51, 51, 0.08);
+      color: var(--red);
+      border: 1px solid rgba(204, 51, 51, 0.15);
     }
 
-    @keyframes spin {
-      to {
-        transform: rotate(360deg);
-      }
+    @keyframes pulse-border {
+      0%, 100% { border-color: rgba(224, 201, 82, 0.15); }
+      50% { border-color: var(--accent); }
     }
 
-    .tracks {
-      display: grid;
-      gap: 0;
+    /* Track Library main area */
+    .main-content {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
     }
 
-    .track {
-      display: grid;
-      grid-template-columns: 48px minmax(0, 1fr) 44px;
-      gap: 12px;
+    .search-input-wrapper {
+      position: relative;
+      width: 220px;
+    }
+
+    .search-input {
+      width: 100%;
+      height: 30px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0 10px 0 28px;
+      color: var(--text);
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 12px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .search-input:focus {
+      outline: none;
+      border-color: var(--border-accent);
+      box-shadow: 0 0 0 1px rgba(224, 201, 82, 0.05);
+    }
+
+    .search-input::placeholder {
+      color: var(--text-dim);
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-dim);
+      display: flex;
       align-items: center;
-      padding: 12px;
-      background: var(--bg-el);
+      pointer-events: none;
+    }
+
+    .tracks-container {
+      flex: 1;
+      overflow-y: auto;
+      padding-right: 2px;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+      align-content: start;
+    }
+
+    /* Premium Horizontal Track Item Card */
+    .track-card {
+      display: grid;
+      grid-template-columns: 56px minmax(0, 1fr) auto;
+      gap: 14px;
+      align-items: center;
+      padding: 10px 12px;
+      background: var(--bg);
       border: 1px solid var(--border);
       border-radius: 10px;
-      animation: append 180ms ease-out;
+      transition: border-color 0.2s ease-out, background-color 0.2s ease-out, transform 0.2s ease-out;
+      animation: slide-in 0.22s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
-    .track:hover {
-      background: var(--bg-hover);
-      border-color: var(--border-var);
+    .track-card:hover {
+      background: rgba(224, 201, 82, 0.01);
+      border-color: var(--border-accent);
+      transform: translateX(1px);
     }
 
-    .track + .track {
-      margin-top: 8px;
+    .track-art-wrapper {
+      width: 56px;
+      height: 56px;
+      border-radius: 6px;
+      background: var(--surface);
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--border);
       position: relative;
     }
 
-    .track + .track::before {
-      content: "";
-      position: absolute;
-      left: 72px;
-      right: 12px;
-      top: -5px;
-      height: 1px;
-      background: var(--border);
+    .track-art {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
     }
 
-    @keyframes append {
+    .track-art-placeholder {
+      width: 20px;
+      height: 20px;
+      color: var(--text-dim);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .track-info {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .track-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      line-height: 1.3;
+    }
+
+    .track-uploader {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-muted);
+      margin-top: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .track-meta-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 4px;
+    }
+
+    .track-meta-item {
+      font-size: 11px;
+      color: var(--text-dim);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .track-genre-pill {
+      font-size: 9px;
+      font-weight: 700;
+      color: var(--accent);
+      background: rgba(224, 201, 82, 0.05);
+      border: 1px solid rgba(224, 201, 82, 0.12);
+      padding: 1px 6px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .btn-delete {
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s ease-out;
+    }
+
+    .btn-delete:hover {
+      color: var(--red);
+      border-color: var(--red);
+      background: rgba(204, 51, 51, 0.05);
+      box-shadow: 0 0 8px rgba(204, 51, 51, 0.1);
+    }
+
+    .btn-delete:active {
+      transform: scale(0.95);
+    }
+
+    /* Animation Utilities */
+    .spinner-svg {
+      animation: rotate 1s linear infinite;
+    }
+
+    .spinner-small {
+      width: 13px;
+      height: 13px;
+      color: currentColor;
+    }
+
+    .spinner-medium {
+      width: 24px;
+      height: 24px;
+      color: var(--accent);
+    }
+
+    @keyframes rotate {
+      100% { transform: rotate(360deg); }
+    }
+
+    @keyframes slide-in {
       from {
         opacity: 0;
         transform: translateY(6px);
@@ -325,141 +555,78 @@
         transform: translateY(0);
       }
     }
-
-    .art {
-      width: 48px;
-      height: 48px;
-      background: var(--bg-active);
-      border-radius: 6px;
-      object-fit: cover;
-      display: block;
-    }
-
-    .meta {
-      min-width: 0;
-    }
-
-    .track-title {
-      color: var(--text);
-      font-size: 15px;
-      font-weight: 500;
-      line-height: 1.3;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .track-uploader {
-      margin-top: 3px;
-      color: var(--text-muted);
-      font-size: 13px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .track-detail {
-      margin-top: 3px;
-      color: var(--text-dim);
-      font-size: 13px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .delete {
-      width: 44px;
-      height: 44px;
-      border: 0;
-      background: transparent;
-      color: var(--error);
-      cursor: pointer;
-      opacity: 0.6;
-      font: 400 18px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    }
-
-    .delete:hover {
-      opacity: 1;
-    }
-
-    .empty {
-      color: var(--text-dim);
-      font-size: 13px;
-      padding: 4px 0;
-    }
-
-    @media (max-width: 820px) {
-      .page {
-        min-height: 100vh;
-        padding: 16px;
-        display: block;
-      }
-
-      .title {
-        margin-bottom: 20px;
-      }
-
-      .layout,
-      .column {
-        display: grid;
-        grid-template-columns: 1fr;
-        gap: 20px;
-      }
-
-      .section {
-        margin-bottom: 0;
-      }
-
-      .progress-scroll,
-      .tracks-scroll {
-        max-height: 40vh;
-      }
-    }
   </style>
 </head>
 <body>
-  <main class="page">
-    <h1 class="title">Sound Downloader</h1>
-
-    <div class="layout">
-      <div class="column left">
-        <section class="section">
-          <div class="section-header">
-            <p class="caption">Download</p>
+  <main class="app-container">
+    <!-- Content Workspace -->
+    <div class="dashboard-layout">
+      <!-- Left column: Actions + Active downloads queue -->
+      <aside class="sidebar">
+        <!-- Input section -->
+        <section class="panel">
+          <div class="panel-header">
+            <h2 class="panel-title">Download Core</h2>
           </div>
-          <form class="form" id="downloadForm">
-            <textarea id="urls" placeholder="Paste SoundCloud URLs, one per line"></textarea>
-            <button class="primary" id="downloadButton" type="submit">↓ Download</button>
+          <form class="form-group" id="downloadForm">
+            <textarea class="input-textarea" id="urls" placeholder="Paste SoundCloud URLs (one per line)..."></textarea>
+            <button class="btn-download" id="downloadButton" type="submit">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+              </svg>
+              <span>Download Tracks</span>
+            </button>
             <div class="notice" id="notice"></div>
           </form>
         </section>
 
-        <section class="section">
-          <div class="section-header">
-            <p class="caption">Progress</p>
-            <div class="summary" id="jobSummary">Downloaded 0 / 0</div>
+        <!-- Progress/Queue list section -->
+        <section class="panel">
+          <div class="panel-header">
+            <h2 class="panel-title">Active Monitor</h2>
+            <div class="panel-badge" id="jobSummary">Queue Empty</div>
           </div>
-          <div class="scroll progress-scroll">
-            <div class="progress-list" id="progressList">
-              <div class="empty">Waiting…</div>
+          <div class="queue-list" id="progressList">
+            <div class="empty-state">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+              </svg>
+              <span>Waiting for downloads...</span>
             </div>
           </div>
         </section>
-      </div>
+      </aside>
 
-      <div class="column right">
-        <section class="section">
-          <div class="section-header">
-            <p class="caption">Tracks</p>
-            <div class="summary" id="trackSummary">0 tracks</div>
-          </div>
-          <div class="scroll tracks-scroll">
-            <div class="tracks" id="tracks">
-              <div class="empty">No downloaded tracks</div>
+      <!-- Right column: Music Library -->
+      <section class="panel main-content">
+        <div class="panel-header">
+          <h2 class="panel-title">Track Library</h2>
+          <div class="library-header-actions">
+            <!-- Search engine wrapper -->
+            <div class="search-input-wrapper">
+              <span class="search-icon">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+              </span>
+              <input class="search-input" type="text" id="searchTracks" placeholder="Search track, artist, genre...">
             </div>
+            <div class="panel-badge" id="trackSummary">0 tracks</div>
           </div>
-        </section>
-      </div>
+        </div>
+
+        <div class="tracks-container" id="tracks">
+          <div class="empty-state">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M12 2a10 10 0 0 1 10 10"/>
+            </svg>
+            <span>No downloaded tracks found</span>
+          </div>
+        </div>
+      </section>
     </div>
   </main>
 
@@ -472,7 +639,10 @@
     const trackSummary = document.getElementById('trackSummary');
     const progressList = document.getElementById('progressList');
     const tracksEl = document.getElementById('tracks');
+    const searchInput = document.getElementById('searchTracks');
+    
     const jobs = new Map();
+    let allTracks = [];
 
     const statusRank = {
       downloading: 0,
@@ -496,7 +666,6 @@
       if (!Number.isFinite(value) || value <= 0) {
         return '';
       }
-
       const mb = value / 1024 / 1024;
       return `${mb.toFixed(mb >= 10 ? 1 : 2)} MB`;
     }
@@ -527,21 +696,21 @@
 
     function updateJobSummary(summary) {
       const data = summary || getSummaryFromJobs();
+      if (!data.total) {
+        jobSummary.textContent = 'Queue Empty';
+        return;
+      }
       const completed = (data.done || 0) + (data.skipped || 0);
-      const extra = [];
-      if (data.downloading) extra.push(`${data.downloading} downloading`);
-      if (data.pending) extra.push(`${data.pending} pending`);
-      if (data.error) extra.push(`${data.error} error`);
-      jobSummary.textContent = `Downloaded ${completed} / ${data.total || 0}${extra.length ? ` · ${extra.join(' · ')}` : ''}`;
+      jobSummary.textContent = `${completed}/${data.total} Complete`;
     }
 
     function statusLabel(job) {
-      if (job.status === 'pending') return 'Waiting…';
-      if (job.status === 'downloading') return 'Downloading…';
-      if (job.status === 'done') return `✓ ${text(job.file || job.message)}`;
-      if (job.status === 'skipped') return `✓ ${text(job.file || job.message)}`;
-      if (job.status === 'error') return `✕ ${truncate(job.message)}`;
-      return text(job.message || job.status);
+      if (job.status === 'pending') return 'Waiting...';
+      if (job.status === 'downloading') return 'Downloading...';
+      if (job.status === 'done') return `✓ Success`;
+      if (job.status === 'skipped') return `✓ Cached`;
+      if (job.status === 'error') return `✕ Failed`;
+      return text(job.status);
     }
 
     function renderJobs(summary) {
@@ -555,8 +724,13 @@
 
       if (!sortedJobs.length) {
         const empty = document.createElement('div');
-        empty.className = 'empty';
-        empty.textContent = 'Waiting…';
+        empty.className = 'empty-state';
+        empty.innerHTML = `
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+          </svg>
+          <span>Waiting for downloads...</span>
+        `;
         progressList.appendChild(empty);
         updateJobSummary(summary);
         return;
@@ -564,35 +738,39 @@
 
       for (const job of sortedJobs) {
         const item = document.createElement('div');
-        item.className = `progress-item ${job.status}`;
+        item.className = `queue-item ${job.status}`;
 
-        const main = document.createElement('div');
-        main.className = 'progress-main';
+        const details = document.createElement('div');
+        details.className = 'queue-details';
+
+        const titleRow = document.createElement('div');
+        titleRow.className = 'queue-title-row';
 
         if (job.status === 'downloading') {
-          const spinner = document.createElement('span');
-          spinner.className = 'spinner';
-          main.appendChild(spinner);
+          titleRow.innerHTML = `
+            <svg class="spinner-svg spinner-small" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+              <circle cx="12" cy="12" r="10" stroke-opacity="0.1"></circle>
+              <path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"></path>
+            </svg>
+          `;
         }
 
-        const textWrap = document.createElement('div');
-        textWrap.className = 'progress-text';
-
-        const title = document.createElement('div');
-        title.className = 'progress-title';
-        title.textContent = statusLabel(job);
+        const titleText = document.createElement('span');
+        titleText.className = 'queue-title';
+        titleText.textContent = job.status === 'error' ? `${statusLabel(job)}: ${truncate(job.message)}` : (job.file ? job.file : statusLabel(job));
+        titleRow.appendChild(titleText);
 
         const url = document.createElement('div');
-        url.className = 'progress-url';
+        url.className = 'queue-url';
         url.textContent = job.url;
 
-        const state = document.createElement('div');
-        state.className = 'progress-state';
-        state.textContent = job.status;
+        details.append(titleRow, url);
 
-        textWrap.append(title, url);
-        main.appendChild(textWrap);
-        item.append(main, state);
+        const statusTag = document.createElement('span');
+        statusTag.className = 'queue-status-tag';
+        statusTag.textContent = job.status;
+
+        item.append(details, statusTag);
         progressList.appendChild(item);
       }
 
@@ -617,38 +795,71 @@
       renderJobs(data.summary);
     }
 
-    async function loadTracks() {
-      const response = await fetch('/tracks');
-      const data = await response.json();
+    function renderTracks() {
       tracksEl.textContent = '';
+      const query = searchInput.value.toLowerCase().trim();
 
-      const tracks = data.tracks || [];
-      trackSummary.textContent = `${tracks.length} ${tracks.length === 1 ? 'track' : 'tracks'}`;
+      const filtered = allTracks.filter(track => {
+        const title = (track.title || track.file || '').toLowerCase();
+        const artist = (track.uploader || '').toLowerCase();
+        const genre = (track.genre || '').toLowerCase();
+        return title.includes(query) || artist.includes(query) || genre.includes(query);
+      });
 
-      if (tracks.length === 0) {
+      trackSummary.textContent = query 
+        ? `${filtered.length} of ${allTracks.length} tracks` 
+        : `${allTracks.length} ${allTracks.length === 1 ? 'track' : 'tracks'}`;
+
+      if (filtered.length === 0) {
         const empty = document.createElement('div');
-        empty.className = 'empty';
-        empty.textContent = 'No downloaded tracks';
+        empty.className = 'empty-state';
+        empty.innerHTML = `
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M12 2a10 10 0 0 1 10 10"/>
+          </svg>
+          <span>${query ? 'No matching tracks found' : 'No downloaded tracks found'}</span>
+        `;
         tracksEl.appendChild(empty);
         return;
       }
 
-      for (const track of tracks) {
+      for (const track of filtered) {
         const card = document.createElement('article');
-        card.className = 'track';
+        card.className = 'track-card';
 
-        let art;
+        // Artwork Setup with Fallback SVG
+        const artWrapper = document.createElement('div');
+        artWrapper.className = 'track-art-wrapper';
+
+        const placeholder = document.createElement('div');
+        placeholder.className = 'track-art-placeholder';
+        placeholder.innerHTML = `
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 18V5l12-2v13"></path>
+            <circle cx="6" cy="18" r="3"></circle>
+            <circle cx="18" cy="16" r="3"></circle>
+          </svg>
+        `;
+
         if (track.artwork) {
-          art = document.createElement('img');
-          art.src = track.artwork;
-          art.alt = '';
-        } else {
-          art = document.createElement('div');
+          const img = document.createElement('img');
+          img.className = 'track-art';
+          img.src = track.artwork;
+          img.alt = '';
+          img.onerror = () => {
+            img.style.display = 'none';
+            placeholder.style.display = 'flex';
+          };
+          artWrapper.appendChild(img);
+          placeholder.style.display = 'none';
         }
-        art.className = 'art';
+        artWrapper.appendChild(placeholder);
 
-        const meta = document.createElement('div');
-        meta.className = 'meta';
+        // Metadata elements
+        const info = document.createElement('div');
+        info.className = 'track-info';
 
         const title = document.createElement('div');
         title.className = 'track-title';
@@ -656,29 +867,87 @@
 
         const uploader = document.createElement('div');
         uploader.className = 'track-uploader';
-        uploader.textContent = track.uploader || 'Unknown uploader';
+        uploader.textContent = track.uploader || 'Unknown Artist';
 
-        const detail = document.createElement('div');
-        detail.className = 'track-detail';
-        const parts = [track.durationText, formatSize(track.size)].filter(Boolean);
-        detail.textContent = parts.join(' · ');
+        const metaRow = document.createElement('div');
+        metaRow.className = 'track-meta-row';
 
-        meta.append(title, uploader, detail);
+        const durationText = track.durationText;
+        const sizeText = formatSize(track.size);
 
+        if (durationText) {
+          const dur = document.createElement('span');
+          dur.className = 'track-meta-item';
+          dur.innerHTML = `
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+            <span>${durationText}</span>
+          `;
+          metaRow.appendChild(dur);
+        }
+
+        if (sizeText) {
+          const sz = document.createElement('span');
+          sz.className = 'track-meta-item';
+          sz.innerHTML = `
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect>
+              <line x1="7" y1="2" x2="7" y2="22"></line>
+              <line x1="17" y1="2" x2="17" y2="22"></line>
+              <line x1="2" y1="12" x2="22" y2="12"></line>
+              <line x1="2" y1="7" x2="7" y2="7"></line>
+              <line x1="2" y1="17" x2="7" y2="17"></line>
+              <line x1="17" y1="17" x2="22" y2="17"></line>
+              <line x1="17" y1="7" x2="22" y2="7"></line>
+            </svg>
+            <span>${sizeText}</span>
+          `;
+          metaRow.appendChild(sz);
+        }
+
+        if (track.genre) {
+          const gen = document.createElement('span');
+          gen.className = 'track-genre-pill';
+          gen.textContent = track.genre;
+          metaRow.appendChild(gen);
+        }
+
+        info.append(title, uploader, metaRow);
+
+        // Delete button
         const del = document.createElement('button');
-        del.className = 'delete';
+        del.className = 'btn-delete';
         del.type = 'button';
-        del.textContent = '✕';
-        del.title = 'Delete';
+        del.title = 'Delete track';
+        del.innerHTML = `
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="3 6 5 6 21 6"></polyline>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+          </svg>
+        `;
         del.addEventListener('click', async () => {
-          await fetch(`/tracks/${encodeURIComponent(track.file)}`, { method: 'DELETE' });
-          await loadTracks();
+          if (confirm(`Delete "${track.title || track.file}" permanently?`)) {
+            await fetch(`/tracks/${encodeURIComponent(track.file)}`, { method: 'DELETE' });
+            await loadTracks();
+          }
         });
 
-        card.append(art, meta, del);
+        card.append(artWrapper, info, del);
         tracksEl.appendChild(card);
       }
     }
+
+    async function loadTracks() {
+      const response = await fetch('/tracks');
+      const data = await response.json();
+      allTracks = data.tracks || [];
+      renderTracks();
+    }
+
+    // Connect Search Event Listener
+    searchInput.addEventListener('input', renderTracks);
 
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
